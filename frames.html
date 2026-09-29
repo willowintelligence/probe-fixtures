@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Frame fixture</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 44rem; margin: 2rem auto; padding: 0 1rem; color: #222; background: #fff; }
+  iframe { display: block; width: 100%; height: 9rem; border: 1px solid #bbb; }
+  pre { white-space: pre-wrap; word-break: break-all; background: #f4f4f4; padding: 0.5rem; font-size: 0.8rem; }
+</style>
+<script>
+  // Which frames this page shows: all three, or the one ?frame= names (the
+  // smoke opens each alone, so each refusal is counted against its own frame).
+  var only = new URLSearchParams(location.search).get('frame');
+  // Add a frame where the calling script sits. A first-load handler is
+  // attached before the address is set, so no load can be missed, and runs
+  // once only (a refused load fires load again, on the error page).
+  function addFrame(kind, title, src, onFirstLoad) {
+    var here = document.currentScript;
+    if (only !== null && only !== kind) {
+      here.parentNode.hidden = true;
+      return;
+    }
+    var frame = document.createElement('iframe');
+    frame.title = title;
+    if (onFirstLoad) {
+      var loaded = false;
+      frame.addEventListener('load', function () {
+        if (loaded) return;
+        loaded = true;
+        onFirstLoad(frame);
+      });
+    }
+    frame.src = src;
+    here.parentNode.insertBefore(frame, here);
+  }
+</script>
+</head>
+<body>
+<h1>Frame fixture</h1>
+<p>A test page for Willow's cloud browser. It holds three frames from other sites. Each one tries to open an example.com address that carries a made-up Google Form submit address (<code>https://docs.google.com/forms/d/e/willow-probe-fixture/formResponse</code>). The browser's safety gate must refuse all three loads, and this page must stay where it is.</p>
+<p>Nothing here is real: the form id names no form, and no address on this page goes to Google. If a gate failed, the frame would show example.com's sample page. Add <code>?frame=at-once</code>, <code>?frame=moves-itself</code> or <code>?frame=re-pointed</code> to show one frame alone.</p>
+
+<section>
+<h2>1. A frame that loads at once</h2>
+<script>
+  addFrame('at-once', 'Frame 1: loads at once',
+    'https://example.com/?frame=at-once&next=https%3A%2F%2Fdocs.google.com%2Fforms%2Fd%2Fe%2Fwillow-probe-fixture%2FformResponse');
+</script>
+</section>
+
+<section>
+<h2>2. A frame that moves itself</h2>
+<p>Its own page is the one-line document below, served back by httpbin.org's base64 echo (a public HTTP test service), so the frame is on another site. Half a second after it loads, it sends itself to its address.</p>
+<pre>&lt;!doctype html&gt;&lt;meta charset="utf-8"&gt;&lt;title&gt;Frame 2&lt;/title&gt;&lt;p&gt;This frame moves itself half a second after it loads.&lt;/p&gt;&lt;script&gt;addEventListener("load", function () { setTimeout(function () { location.href = "https://example.com/?frame=moves-itself&amp;next=https%3A%2F%2Fdocs.google.com%2Fforms%2Fd%2Fe%2Fwillow-probe-fixture%2FformResponse"; }, 500); });&lt;/script&gt;</pre>
+<script>
+  addFrame('moves-itself', 'Frame 2: moves itself after it loads',
+    'https://httpbin.org/base64/PCFkb2N0eXBlIGh0bWw-PG1ldGEgY2hhcnNldD0idXRmLTgiPjx0aXRsZT5GcmFtZSAyPC90aXRsZT48cD5UaGlzIGZyYW1lIG1vdmVzIGl0c2VsZiBoYWxmIGEgc2Vjb25kIGFmdGVyIGl0IGxvYWRzLjwvcD48c2NyaXB0PmFkZEV2ZW50TGlzdGVuZXIoImxvYWQiLCBmdW5jdGlvbiAoKSB7IHNldFRpbWVvdXQoZnVuY3Rpb24gKCkgeyBsb2NhdGlvbi5ocmVmID0gImh0dHBzOi8vZXhhbXBsZS5jb20vP2ZyYW1lPW1vdmVzLWl0c2VsZiZuZXh0PWh0dHBzJTNBJTJGJTJGZG9jcy5nb29nbGUuY29tJTJGZm9ybXMlMkZkJTJGZSUyRndpbGxvdy1wcm9iZS1maXh0dXJlJTJGZm9ybVJlc3BvbnNlIjsgfSwgNTAwKTsgfSk7PC9zY3JpcHQ-');
+</script>
+</section>
+
+<section>
+<h2>3. A frame this page re-points</h2>
+<p>It first loads example.com's sample page; half a second after that, this page points it at its address.</p>
+<script>
+  addFrame('re-pointed', 'Frame 3: re-pointed by this page', 'https://example.com/',
+    function (frame) {
+      setTimeout(function () {
+        frame.src = 'https://example.com/?frame=re-pointed&next=https%3A%2F%2Fdocs.google.com%2Fforms%2Fd%2Fe%2Fwillow-probe-fixture%2FformResponse';
+      }, 500);
+    });
+</script>
+</section>
+</body>
+</html>
